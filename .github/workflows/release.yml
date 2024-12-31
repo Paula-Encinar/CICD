@@ -1,0 +1,32 @@
+name: Create and Merge Pull Request from DEV to MAIN
+
+on:
+  workflow_dispatch: # Evento manual para activar el workflow
+
+jobs:
+  create-and-merge-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+
+    - name: Create Pull Request
+      id: create_pr
+      uses: peter-evans/create-pull-request@v5
+      with:
+        branch: dev # Rama de origen
+        base: main  # Rama de destino
+        commit-message: "Auto: Actualización de DEV a MAIN"
+        title: "PR automática de DEV a MAIN"
+        body: |
+          Este Pull Request fue generado automáticamente para pasar los cambios de `dev` a `main`.
+        labels: 'automerge-dev-to-main' # Etiqueta específica para auto-merge
+
+    - name: Enable Auto-Merge for Specific PRs
+      if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR se creó correctamente
+      uses: pascalgn/automerge-action@v0.15.6
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      with:
+        merge_label: 'automerge-dev-to-main' # Solo fusionar PRs con esta etiqueta
