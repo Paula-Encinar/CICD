@@ -10,6 +10,8 @@ jobs:
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # Traer todas las referencias (todas las ramas)
 
     - name: Configure Git
       run: |
@@ -18,8 +20,8 @@ jobs:
 
     - name: Verify dev branch exists
       run: |
-        if ! git show-ref --verify --quiet refs/heads/dev; then
-          echo "Error: The branch 'dev' does not exist. Please create it first.";
+        if ! git show-ref --verify --quiet refs/remotes/origin/dev; then
+          echo "Error: The branch 'dev' does not exist in the remote repository. Please create it first.";
           exit 1;
         fi
 
