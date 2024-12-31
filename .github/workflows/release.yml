@@ -11,31 +11,39 @@ jobs:
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0 # Traer todas las referencias (todas las ramas)
+        fetch-depth: 0
 
     - name: Configure Git
       run: |
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
 
-    - name: Verify dev branch exists
+    - name: Verify Changes in DEV
       run: |
-        if ! git show-ref --verify --quiet refs/remotes/origin/dev; then
-          echo "Error: The branch 'dev' does not exist in the remote repository. Please create it first.";
-          exit 1;
-        fi
+        git fetch origin dev
+        git log origin/main..origin/dev
 
     - name: Create Pull Request
       id: create_pr
       uses: peter-evans/create-pull-request@v5
       with:
-        branch: dev # Rama de origen
-        base: main  # Rama de destino
+        branch: dev
+        base: main
         commit-message: "Auto: Actualización de DEV a MAIN"
         title: "PR automática de DEV a MAIN"
         body: |
           Este Pull Request fue generado automáticamente para pasar los cambios de `dev` a `main`.
         labels: 'automerge-dev-to-main'
+
+    - name: Debug PR Information
+      run: |
+        echo "PR URL: ${{ steps.create_pr.outputs.pull-request-url }}"
+        echo "PR Number: ${{ steps.create_pr.outputs.pull-request-number }}"
+
+    - name: Verify PR Labels
+      run: |
+        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+             https://api.github.com/repos/${{ github.repository }}/issues/${{ steps.create_pr.outputs.pull-request-number }}/labels
 
     - name: Enable Auto-Merge
       if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR se creó correctamente
