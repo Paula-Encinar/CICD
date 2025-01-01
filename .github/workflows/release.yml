@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    # Paso 1: Clonar todo el historial del repositorio
+    # Paso 1: Clonar el repositorio completo
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0 # Descargar todo el historial
+        fetch-depth: 0 # Descargar todo el historial para evitar problemas de comparación
 
     # Paso 2: Configurar Git
     - name: Configure Git
@@ -20,53 +20,33 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
 
-    # Paso 3: Verificar diferencias explícitas entre ramas
-    - name: Check for Changes Between DEV and MAIN
-      id: check_diff
-      run: |
-        # Asegurarse de tener las últimas versiones remotas de ambas ramas
-        git fetch origin main
-        git fetch origin dev
-
-        # Verificar si hay diferencias entre las ramas
-        DIFF_OUTPUT=$(git diff --name-only origin/main..origin/dev)
-        if [ -z "$DIFF_OUTPUT" ]; then
-          echo "No changes detected between dev and main."
-          echo "has_changes=false" >> $GITHUB_ENV
-        else
-          echo "Changes detected between dev and main."
-          echo "$DIFF_OUTPUT"
-          echo "has_changes=true" >> $GITHUB_ENV
-        fi
-
-    # Paso 4: Crear Pull Request si hay diferencias
+    # Paso 3: Crear Pull Request
     - name: Create Pull Request
       id: create_pr
-      if: env.has_changes == 'true' # Solo si se detectaron cambios
       uses: peter-evans/create-pull-request@v7
       with:
-        branch: dev # Rama origen
-        base: main  # Rama destino
+        branch: dev                     # Rama de origen
+        base: main                      # Rama de destino
         commit-message: "Auto: Actualización de DEV a MAIN"
-        title: PR automática de DEV a MAIN
+        title: "PR automática de DEV a MAIN"
         body: |
-          Este Pull Request fue generado automáticamente para pasar los cambios actuales de `dev` a `main`.
-        labels: 'automerge-dev-to-main'
-        committer: GitHub <noreply@github.com>
-        author: Paula-Encinar <Paula-Encinar@users.noreply.github.com>
+          Este Pull Request fue generado automáticamente para sincronizar los cambios de `dev` a `main`.
+        labels: automerge-dev-to-main
+        branch-suffix: timestamp        # Forzar un sufijo único para evitar conflictos
+        token: ${{ secrets.TOKEN }}     # Fine-Grained Token para autenticación
 
-    # Paso 5: Debug del PR creado
+    # Paso 4: Depurar el PR
     - name: Debug PR Information
-      if: env.has_changes == 'true' # Solo si hubo cambios
+      if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR fue creado
       run: |
         echo "PR URL: ${{ steps.create_pr.outputs.pull-request-url }}"
         echo "PR Number: ${{ steps.create_pr.outputs.pull-request-number }}"
 
-    # Paso 6: Habilitar auto-merge
+    # Paso 5: Auto-Merge (Opcional)
     - name: Enable Auto-Merge
       if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR fue creado
       uses: pascalgn/automerge-action@v0.15.6
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }} # Usa tu Fine-grained token
+        GITHUB_TOKEN: ${{ secrets.TOKEN }} # Fine-Grained Token
       with:
-        merge_label: 'automerge-dev-to-main'
+        merge_label: automerge-dev-to-main
