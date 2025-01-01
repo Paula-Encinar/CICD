@@ -99,4 +99,4 @@ jobs:
         run: |
           PR_NUMBER=${{ env.PR_NUMBER }}
           echo "Fusionando el PR #$PR_NUMBER..."
-          gh pr merge $PR_NUMBER --merge --delete-branch --admin --auto
+          gh pr merge $PR_NUMBER --merge --delete-branch --auto
