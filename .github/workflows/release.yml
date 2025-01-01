@@ -7,37 +7,37 @@ jobs:
   create-and-merge:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
+      # Paso 1: Check out el repo (opcional pero recomendable)
       - name: Checkout
         uses: actions/checkout@v3
 
+      # Paso 2: Instalar GitHub CLI (gh) en el runner
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
 
+      # Paso 3: Crear el Pull Request con GH CLI
       - name: Create PR with GH CLI
-        id: create_pr
         run: |
+          # 3a) Autenticar la CLI usando el GITHUB_TOKEN
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-          PR_JSON=$(gh pr create \
+          # 3b) Crear el PR y asignar la etiqueta 'automerge'
+          gh pr create \
             --base main \
             --head dev \
-            --title "Fusionar dev en main" \
-            --body "Este PR se creó con GH CLI" \
-            --json number,url)
+            --title "Fusionar dev a main" \
+            --body "Pull Request creado con GH CLI" \
+            --label automerge
 
-          echo "PR_JSON=$PR_JSON"
-
-          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
-          echo "::set-output name=pr_number::$PR_NUMBER"
-
-          # (Opcional) Añadir etiqueta "automerge"
-          gh pr edit $PR_NUMBER --add-label automerge
-
-      - name: Enable Auto-Merge (pascalgn)
-        if: steps.create_pr.outputs.pr_number != ''
+      # Paso 4: Auto-merge con pascalgn/automerge-action
+      - name: Enable Auto-Merge
         uses: pascalgn/automerge-action@v0.15.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
