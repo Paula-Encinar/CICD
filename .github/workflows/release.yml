@@ -1,34 +1,45 @@
-name: Create PR from dev to main using GitHub CLI
+name: Create PR and Auto-Merge
 
 on:
   workflow_dispatch:
 
 jobs:
-  create-pr:
+  create-and-merge:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
 
-      - name: Create Pull Request from dev to main
+      - name: Create PR with GH CLI
+        id: create_pr
         run: |
-          # Autenticarse con el GITHUB_TOKEN
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-          gh pr create \
-            --head dev \
+          PR_JSON=$(gh pr create \
             --base main \
-            --title "Fusionar dev a main" \
-            --body "Pull Request creado desde la rama dev sin force push."
+            --head dev \
+            --title "Fusionar dev en main" \
+            --body "Este PR se creó con GH CLI" \
+            --json number,url)
+
+          echo "PR_JSON=$PR_JSON"
+
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          echo "::set-output name=pr_number::$PR_NUMBER"
+
+          # (Opcional) Añadir etiqueta "automerge"
+          gh pr edit $PR_NUMBER --add-label automerge
+
+      - name: Enable Auto-Merge (pascalgn)
+        if: steps.create_pr.outputs.pr_number != ''
+        uses: pascalgn/automerge-action@v0.15.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          merge_label: automerge
