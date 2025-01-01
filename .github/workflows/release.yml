@@ -1,7 +1,7 @@
 name: Create and Merge Pull Request from DEV to MAIN
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Para ejecutarlo manualmente desde la pestaña Actions
 
 jobs:
   create-and-merge-pr:
@@ -13,42 +13,42 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso A: Clonar el repositorio con todo el historial
+      # Paso A: Clonar el repositorio (historial completo)
       - name: Checkout the repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # Paso B: Configurar Git (committer por defecto)
+      # Paso B: Configurar Git
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      # Paso C: Crear (o actualizar) el Pull Request
+      # Paso C: Crear o actualizar Pull Request de dev -> main
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v7
         with:
-          # Se puede omitir si quieres usar el GITHUB_TOKEN por defecto:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: dev    # Rama de origen
-          base: main     # Rama destino
-          commit-message: "Auto: Actualización de DEV a MAIN"
+          # Usar el GITHUB_TOKEN por defecto (sin 'token:' usa secrets.GITHUB_TOKEN)
+          branch: dev      # Rama de origen
+          base: main       # Rama de destino
+          commit-message: "Auto: Fusionar DEV en MAIN"
           title: "PR automática de DEV a MAIN"
           body: |
-            Este Pull Request fue generado automáticamente
-            para sincronizar los cambios de `dev` a `main`.
-          # Si NO quieres que se genere una rama nueva cada vez, NO incluyas branch-suffix
+            Este Pull Request fue generado automáticamente para fusionar
+            la rama dev en main.
+          # Si NO quieres que se genere una nueva rama en cada ejecución,
+          # no agregues branch-suffix, ni random ni timestamp.
 
-      # Paso D: Debug (opcional) - Muestra la URL y número del PR si se creó
-      - name: Debug PR Information
+      # Paso D: Depurar (opcional)
+      - name: Debug PR
         if: steps.create_pr.outputs.pull-request-url != ''
         run: |
-          echo "PR URL: ${{ steps.create_pr.outputs.pull-request-url }}"
-          echo "PR Number: ${{ steps.create_pr.outputs.pull-request-number }}"
+          echo "Pull Request URL: ${{ steps.create_pr.outputs.pull-request-url }}"
+          echo "Pull Request Number: ${{ steps.create_pr.outputs.pull-request-number }}"
 
-      # Paso E: Auto-Merge (opcional) - Fusiona el PR automáticamente si todo está bien
+      # Paso E: Auto-Merge (opcional)
       - name: Enable Auto-Merge
         if: steps.create_pr.outputs.pull-request-url != ''
         uses: pascalgn/automerge-action@v0.15.6
