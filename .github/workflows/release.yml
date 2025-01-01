@@ -1,10 +1,15 @@
-name: Create PR and Auto-Merge
+name: Create PR, Merge, and Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Rama desde la cual quieres crear el PR (ej. dev)"
+        required: true
+        default: "dev"
 
 jobs:
-  create-and-merge:
+  create-merge-deploy:
     runs-on: ubuntu-latest
 
     permissions:
@@ -12,34 +17,86 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 1: Check out el repo (opcional pero recomendable)
-      - name: Checkout
+      # Paso 1: Check out del repositorio
+      - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Necesario para operaciones completas de Git
 
-      # Paso 2: Instalar GitHub CLI (gh) en el runner
+      # Paso 2: Instalar GitHub CLI
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
-          sudo apt-get install -y gh
+          sudo apt-get install -y gh jq
 
-      # Paso 3: Crear el Pull Request con GH CLI
-      - name: Create PR with GH CLI
+      # Paso 3: Autenticar la CLI usando GITHUB_TOKEN
+      - name: Authenticate GitHub CLI
         run: |
-          # 3a) Autenticar la CLI usando el GITHUB_TOKEN
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-          # 3b) Crear el PR y asignar la etiqueta 'automerge'
-          gh pr create \
+      # Paso 4: Crear el Pull Request
+      - name: Create Pull Request
+        id: create_pr
+        run: |
+          # Crear el PR y capturar la URL de salida
+          PR_URL=$(gh pr create \
             --base main \
-            --head dev \
-            --title "Fusionar dev a main" \
-            --body "Pull Request creado con GH CLI" \
-            --label automerge
+            --head ${{ github.event.inputs.target_branch }} \
+            --title "Fusionar ${{ github.event.inputs.target_branch }} a main" \
+            --body "Este PR se crea y se fusionará automáticamente mediante el workflow." \
+            --draft)  # Usar --draft si deseas revisar antes; eliminar si no
 
-      # Paso 4: Auto-merge con pascalgn/automerge-action
-      - name: Enable Auto-Merge
-        uses: pascalgn/automerge-action@v0.16.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MERGE_LABELS: 'automerge'
-          MERGE_METHOD: 'merge'
+          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
+
+          # Extraer el número del PR de la URL
+          PR_NUMBER="${PR_URL##*/}"
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+
+      # Paso 5: Esperar a que el PR esté listo para fusionar
+      - name: Wait for PR to be Mergeable
+        run: |
+          PR_NUMBER=${{ env.PR_NUMBER }}
+          echo "Esperando que el PR #$PR_NUMBER sea fusionable..."
+
+          # Función para verificar si el PR es mergeable
+          is_mergeable() {
+            gh pr view $PR_NUMBER --json mergeableState --jq '.mergeableState'
+          }
+
+          # Intentar hasta 10 veces (aprox. 10 minutos con espera de 60 segundos)
+          for i in {1..10}; do
+            STATE=$(is_mergeable)
+            echo "Estado de mergeable: $STATE"
+
+            if [[ "$STATE" == "MERGEABLE" ]]; then
+              echo "El PR está listo para fusionar."
+              exit 0
+            elif [[ "$STATE" == "CONFLICTING" ]]; then
+              echo "El PR tiene conflictos de merge. Abortando."
+              exit 1
+            else
+              echo "El PR aún no está listo. Esperando 60 segundos..."
+              sleep 60
+            fi
+          done
+
+          echo "Timeout: El PR no está listo para fusionar después de 10 intentos."
+          exit 1
+
+      # Paso 6: Fusionar el Pull Request
+      - name: Merge Pull Request
+        run: |
+          PR_NUMBER=${{ env.PR_NUMBER }}
+          echo "Fusionando el PR #$PR_NUMBER..."
+
+          gh pr merge $PR_NUMBER --merge --delete-branch --admin  # Opcional: --delete-branch para borrar la rama después de fusionar
+
+      # Paso 7: Desplegar el servicio Docker en producción
+      - name: Deploy Docker to Production
+        run: |
+          echo "Desplegando en producción..."
+          # Aquí añades tus comandos de deploy, por ejemplo:
+          # docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          # docker build -t your-app:latest .
+          # docker push your-app:latest
+          # ssh user@server "docker pull your-app:latest && docker run -d your-app:latest"
