@@ -12,7 +12,7 @@ jobs:
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0 # Descargar todo el historial para ambas ramas
+        fetch-depth: 0 # Descargar todo el historial
 
     # Paso 2: Configurar Git
     - name: Configure Git
@@ -20,7 +20,7 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
 
-    # Paso 3: Detectar diferencias entre dev y main
+    # Paso 3: Verificar diferencias explícitas entre ramas
     - name: Check for Changes Between DEV and MAIN
       id: check_diff
       run: |
@@ -28,13 +28,15 @@ jobs:
         git fetch origin main
         git fetch origin dev
 
-        # Verificar si hay diferencias
-        if git diff --name-only origin/main..origin/dev; then
-          echo "Changes detected between dev and main."
-          echo "has_changes=true" >> $GITHUB_ENV
-        else
+        # Verificar si hay diferencias entre las ramas
+        DIFF_OUTPUT=$(git diff --name-only origin/main..origin/dev)
+        if [ -z "$DIFF_OUTPUT" ]; then
           echo "No changes detected between dev and main."
           echo "has_changes=false" >> $GITHUB_ENV
+        else
+          echo "Changes detected between dev and main."
+          echo "$DIFF_OUTPUT"
+          echo "has_changes=true" >> $GITHUB_ENV
         fi
 
     # Paso 4: Crear Pull Request si hay diferencias
@@ -46,12 +48,14 @@ jobs:
         branch: dev # Rama origen
         base: main  # Rama destino
         commit-message: "Auto: Actualización de DEV a MAIN"
-        title: "PR automática de DEV a MAIN"
+        title: PR automática de DEV a MAIN
         body: |
           Este Pull Request fue generado automáticamente para pasar los cambios actuales de `dev` a `main`.
         labels: 'automerge-dev-to-main'
+        committer: GitHub <noreply@github.com>
+        author: Paula-Encinar <Paula-Encinar@users.noreply.github.com>
 
-    # Paso 5: Depuración de PR creado
+    # Paso 5: Debug del PR creado
     - name: Debug PR Information
       if: env.has_changes == 'true' # Solo si hubo cambios
       run: |
