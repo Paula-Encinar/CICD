@@ -31,7 +31,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           # Usar el GITHUB_TOKEN por defecto (sin 'token:' usa secrets.GITHUB_TOKEN)
-          branch: test-branch      
+          branch: dev      # Rama de origen
           base: main       # Rama de destino
           commit-message: "Auto: Fusionar DEV en MAIN"
           title: "PR automática de DEV a MAIN"
