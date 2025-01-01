@@ -56,43 +56,43 @@ jobs:
           PR_NUMBER="${PR_URL##*/}"
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
-      # Paso 5: Esperar a que el PR esté listo para fusionar
-      - name: Wait for PR to be Mergeable
-        run: |
-          PR_NUMBER=${{ env.PR_NUMBER }}
-          echo "Esperando que el PR #$PR_NUMBER sea fusionable..."
+    #   # Paso 5: Esperar a que el PR esté listo para fusionar
+    #   - name: Wait for PR to be Mergeable
+    #     run: |
+    #       PR_NUMBER=${{ env.PR_NUMBER }}
+    #       echo "Esperando que el PR #$PR_NUMBER sea fusionable..."
 
-          # Intentar hasta 10 veces (aprox. 10 minutos con espera de 60 segundos)
-          max_attempts=10
-          sleep_time=60
+    #       # Intentar hasta 10 veces (aprox. 10 minutos con espera de 60 segundos)
+    #       max_attempts=10
+    #       sleep_time=60
 
-          for ((i=1;i<=max_attempts;i++)); do
-            echo "Intento $i de $max_attempts..."
+    #       for ((i=1;i<=max_attempts;i++)); do
+    #         echo "Intento $i de $max_attempts..."
 
-            # Obtener el estado del mergeable
-            PR_INFO=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, mergeStateStatus: .mergeStateStatus}')
-            MERGEABLE=$(echo $PR_INFO | jq -r '.mergeable')
-            MERGE_STATE_STATUS=$(echo $PR_INFO | jq -r '.mergeStateStatus')
+    #         # Obtener el estado del mergeable
+    #         PR_INFO=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, mergeStateStatus: .mergeStateStatus}')
+    #         MERGEABLE=$(echo $PR_INFO | jq -r '.mergeable')
+    #         MERGE_STATE_STATUS=$(echo $PR_INFO | jq -r '.mergeStateStatus')
 
-            echo "mergeable: $MERGEABLE"
-            echo "mergeStateStatus: $MERGE_STATE_STATUS"
+    #         echo "mergeable: $MERGEABLE"
+    #         echo "mergeStateStatus: $MERGE_STATE_STATUS"
 
-            if [[ "$MERGEABLE" == "true" && "$MERGE_STATE_STATUS" == "CLEAN" ]]; then
-              echo "El PR está listo para fusionar."
-              break
-            elif [[ "$MERGE_STATE_STATUS" == "CONFLICTING" ]]; then
-              echo "El PR tiene conflictos de merge. Abortando."
-              exit 1
-            else
-              echo "El PR aún no está listo. Esperando $sleep_time segundos..."
-              sleep $sleep_time
-            fi
+    #         if [[ "$MERGEABLE" == "true" && "$MERGE_STATE_STATUS" == "CLEAN" ]]; then
+    #           echo "El PR está listo para fusionar."
+    #           break
+    #         elif [[ "$MERGE_STATE_STATUS" == "CONFLICTING" ]]; then
+    #           echo "El PR tiene conflictos de merge. Abortando."
+    #           exit 1
+    #         else
+    #           echo "El PR aún no está listo. Esperando $sleep_time segundos..."
+    #           sleep $sleep_time
+    #         fi
 
-            if [[ $i -eq $max_attempts ]]; then
-              echo "Timeout: El PR no está listo para fusionar después de $((max_attempts * sleep_time)) segundos."
-              exit 1
-            fi
-          done
+    #         if [[ $i -eq $max_attempts ]]; then
+    #           echo "Timeout: El PR no está listo para fusionar después de $((max_attempts * sleep_time)) segundos."
+    #           exit 1
+    #         fi
+    #       done
 
       # Paso 6: Fusionar el Pull Request
       - name: Merge Pull Request
