@@ -34,6 +34,8 @@ jobs:
         body: |
           Este Pull Request fue generado automáticamente para pasar los cambios de `dev` a `main`.
         labels: 'automerge-dev-to-main'
+        debug-log: true
+        always-create: true
 
     - name: Debug PR Information
       run: |
