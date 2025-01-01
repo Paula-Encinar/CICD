@@ -7,46 +7,52 @@ jobs:
   create-and-merge-pr:
     runs-on: ubuntu-22.04
 
+    # 1) Otorga permisos de escritura al GITHUB_TOKEN para que pueda crear y actualizar PRs
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
-    # Paso 1: Clonar el repositorio completo
-    - name: Checkout the repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0 # Descargar todo el historial para evitar problemas de comparación
+      # Paso A: Clonar el repositorio con todo el historial
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    # Paso 2: Configurar Git
-    - name: Configure Git
-      run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
+      # Paso B: Configurar Git (committer por defecto)
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
-    # Paso 3: Crear Pull Request
-    - name: Create Pull Request
-      id: create_pr
-      uses: peter-evans/create-pull-request@v7
-      with:
-        branch: dev                     # Rama de origen
-        base: main                      # Rama de destino
-        commit-message: "Auto: Actualización de DEV a MAIN"
-        title: "PR automática de DEV a MAIN"
-        body: |
-          Este Pull Request fue generado automáticamente para sincronizar los cambios de `dev` a `main`.
-        labels: automerge-dev-to-main
-        branch-suffix: timestamp        # Forzar un sufijo único para evitar conflictos
-        token: ${{ secrets.TOKEN }}     # Fine-Grained Token para autenticación
+      # Paso C: Crear (o actualizar) el Pull Request
+      - name: Create Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # Se puede omitir si quieres usar el GITHUB_TOKEN por defecto:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: dev    # Rama de origen
+          base: main     # Rama destino
+          commit-message: "Auto: Actualización de DEV a MAIN"
+          title: "PR automática de DEV a MAIN"
+          body: |
+            Este Pull Request fue generado automáticamente
+            para sincronizar los cambios de `dev` a `main`.
+          # Si NO quieres que se genere una rama nueva cada vez, NO incluyas branch-suffix
 
-    # Paso 4: Depurar el PR
-    - name: Debug PR Information
-      if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR fue creado
-      run: |
-        echo "PR URL: ${{ steps.create_pr.outputs.pull-request-url }}"
-        echo "PR Number: ${{ steps.create_pr.outputs.pull-request-number }}"
+      # Paso D: Debug (opcional) - Muestra la URL y número del PR si se creó
+      - name: Debug PR Information
+        if: steps.create_pr.outputs.pull-request-url != ''
+        run: |
+          echo "PR URL: ${{ steps.create_pr.outputs.pull-request-url }}"
+          echo "PR Number: ${{ steps.create_pr.outputs.pull-request-number }}"
 
-    # Paso 5: Auto-Merge (Opcional)
-    - name: Enable Auto-Merge
-      if: steps.create_pr.outputs.pull-request-url != '' # Solo si el PR fue creado
-      uses: pascalgn/automerge-action@v0.15.6
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }} # Fine-Grained Token
-      with:
-        merge_label: automerge-dev-to-main
+      # Paso E: Auto-Merge (opcional) - Fusiona el PR automáticamente si todo está bien
+      - name: Enable Auto-Merge
+        if: steps.create_pr.outputs.pull-request-url != ''
+        uses: pascalgn/automerge-action@v0.15.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          merge_label: 'automerge-dev-to-main'
