@@ -17,19 +17,22 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 1: Check out del repositorio
+      # Paso 1: Checkout del repositorio
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Necesario para operaciones completas de Git
 
-      # Paso 2: Instalar GitHub CLI
+      # Paso 2: Instalar GitHub CLI (gh)
       - name: Install GitHub CLI
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gh jq
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh
 
-      # Paso 3: Autenticar la CLI usando GITHUB_TOKEN
+      # Paso 3: Autenticar GitHub CLI usando GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
@@ -38,14 +41,15 @@ jobs:
       - name: Create Pull Request
         id: create_pr
         run: |
-          # Crear el PR y capturar la URL de salida
-          PR_URL=$(gh pr create \
+          PR_OUTPUT=$(gh pr create \
             --base main \
             --head ${{ github.event.inputs.target_branch }} \
             --title "Fusionar ${{ github.event.inputs.target_branch }} a main" \
-            --body "Este PR se crea y se fusionará automáticamente mediante el workflow." \
-            --draft)  # Usar --draft si deseas revisar antes; eliminar si no
+            --body "Este PR se crea y fusionará automáticamente mediante el workflow." \
+            --label automerge)
 
+          # Extraer la URL del PR creado
+          PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://[^ ]+')
           echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
           # Extraer el número del PR de la URL
@@ -58,45 +62,41 @@ jobs:
           PR_NUMBER=${{ env.PR_NUMBER }}
           echo "Esperando que el PR #$PR_NUMBER sea fusionable..."
 
-          # Función para verificar si el PR es mergeable
-          is_mergeable() {
-            gh pr view $PR_NUMBER --json mergeableState --jq '.mergeableState'
-          }
-
           # Intentar hasta 10 veces (aprox. 10 minutos con espera de 60 segundos)
-          for i in {1..10}; do
-            STATE=$(is_mergeable)
-            echo "Estado de mergeable: $STATE"
+          max_attempts=10
+          sleep_time=60
 
-            if [[ "$STATE" == "MERGEABLE" ]]; then
+          for ((i=1;i<=max_attempts;i++)); do
+            echo "Intento $i de $max_attempts..."
+
+            # Obtener el estado del mergeable
+            PR_INFO=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, mergeStateStatus: .mergeStateStatus}')
+            MERGEABLE=$(echo $PR_INFO | jq -r '.mergeable')
+            MERGE_STATE_STATUS=$(echo $PR_INFO | jq -r '.mergeStateStatus')
+
+            echo "mergeable: $MERGEABLE"
+            echo "mergeStateStatus: $MERGE_STATE_STATUS"
+
+            if [[ "$MERGEABLE" == "true" && "$MERGE_STATE_STATUS" == "CLEAN" ]]; then
               echo "El PR está listo para fusionar."
-              exit 0
-            elif [[ "$STATE" == "CONFLICTING" ]]; then
+              break
+            elif [[ "$MERGE_STATE_STATUS" == "CONFLICTING" ]]; then
               echo "El PR tiene conflictos de merge. Abortando."
               exit 1
             else
-              echo "El PR aún no está listo. Esperando 60 segundos..."
-              sleep 60
+              echo "El PR aún no está listo. Esperando $sleep_time segundos..."
+              sleep $sleep_time
+            fi
+
+            if [[ $i -eq $max_attempts ]]; then
+              echo "Timeout: El PR no está listo para fusionar después de $((max_attempts * sleep_time)) segundos."
+              exit 1
             fi
           done
-
-          echo "Timeout: El PR no está listo para fusionar después de 10 intentos."
-          exit 1
 
       # Paso 6: Fusionar el Pull Request
       - name: Merge Pull Request
         run: |
           PR_NUMBER=${{ env.PR_NUMBER }}
           echo "Fusionando el PR #$PR_NUMBER..."
-
-          gh pr merge $PR_NUMBER --merge --delete-branch --admin  # Opcional: --delete-branch para borrar la rama después de fusionar
-
-      # Paso 7: Desplegar el servicio Docker en producción
-      - name: Deploy Docker to Production
-        run: |
-          echo "Desplegando en producción..."
-          # Aquí añades tus comandos de deploy, por ejemplo:
-          # docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          # docker build -t your-app:latest .
-          # docker push your-app:latest
-          # ssh user@server "docker pull your-app:latest && docker run -d your-app:latest"
+          gh pr merge $PR_NUMBER --merge --delete-branch --admin
