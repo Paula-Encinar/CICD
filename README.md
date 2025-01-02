@@ -8,3 +8,5 @@ Actions/workflows
 	    •	Puedes personalizar la etiqueta (automerge-dev-to-main) según tus necesidades. Por ejemplo, usar algo como merge-allowed si prefieres algo más genérico.
 	3.	Verificación Manual:
 	    •	Si creas PRs manualmente y no quieres que sean auto-fusionados, simplemente asegúrate de no asignar la etiqueta automerge-dev-to-main.Nuevo contenido
+
+Esto es un segundo test.
