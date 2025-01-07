@@ -23,15 +23,6 @@ jobs:
         with:
           fetch-depth: 0  # Necesario para operaciones completas de Git
 
-      # Paso 2: Instalar GitHub CLI (gh)
-      - name: Install GitHub CLI
-        run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh
-
       # Paso 3: Autenticar GitHub CLI usando GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
