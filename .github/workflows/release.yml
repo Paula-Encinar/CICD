@@ -46,6 +46,7 @@ jobs:
           # Extraer el número del PR de la URL
           PR_NUMBER="${PR_URL##*/}"
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          gh pr review $PR_NUMBER --approve
 
       # Paso 6: Fusionar el Pull Request
       - name: Merge Pull Request
