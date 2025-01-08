@@ -1,15 +1,15 @@
-name: Create PR, Merge, and Deploy
+name: Create PR and Approve
 
 on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Rama desde la cual quieres crear el PR (ej. dev)"
+        description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
 
 jobs:
-  create-merge-deploy:
+  create-pr-and-approve:
     runs-on: ubuntu-latest
 
     permissions:
@@ -17,35 +17,32 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 1: Checkout del repositorio
       - name: Checkout Repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Necesario para operaciones completas de Git
 
-      # Paso 3: Autenticar GitHub CLI usando GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      # Paso 4: Crear el Pull Request
       - name: Create Pull Request
         id: create_pr
         run: |
           PR_OUTPUT=$(gh pr create \
             --base main \
             --head ${{ github.event.inputs.target_branch }} \
-            --title "Fusionar ${{ github.event.inputs.target_branch }} a main" \
-            --body "Este PR se crea y fusionará automáticamente mediante el workflow." \
-            --label automerge)
+            --title "Merge ${{ github.event.inputs.target_branch }} into main" \
+            --body "This PR was created automatically by the workflow.")
+          echo "PR created: $PR_OUTPUT"
 
-          # Extraer la URL del PR creado
+          # Extraer el número del PR
           PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://[^ ]+')
-          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
-
-          # Extraer el número del PR de la URL
           PR_NUMBER="${PR_URL##*/}"
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+
+      - name: Approve Pull Request
+        run: |
+          echo "Approving the PR as ${{ github.actor }}..."
+          gh pr review ${{ env.PR_NUMBER }} --approve
 
       # Paso 6: Fusionar el Pull Request
       - name: Merge Pull Request
