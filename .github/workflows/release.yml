@@ -7,9 +7,8 @@ on:
         description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
-    # Limitar la ejecución del workflow a la rama `main`
     branches:
-      - main
+      - dev
 
 jobs:
   validate-codeowner:
