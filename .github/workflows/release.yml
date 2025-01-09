@@ -7,13 +7,15 @@ on:
         description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
+    # Limitar la ejecución del workflow a la rama `main`
+    branches:
+      - main
 
 jobs:
   validate-codeowner:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Validar que el usuario que ejecuta el workflow sea un Code Owner
       - name: Validate Code Owner
         run: |
           echo "Validating if ${{ github.actor }} is a Code Owner..."
@@ -33,6 +35,7 @@ jobs:
 
   create-pr:
     runs-on: ubuntu-latest
+    needs: validate-codeowner
 
     permissions:
       contents: write
