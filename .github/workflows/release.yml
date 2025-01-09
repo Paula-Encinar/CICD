@@ -31,8 +31,8 @@ jobs:
           echo "${{ github.actor }} is a valid Code Owner. Proceeding with the workflow..."
 
   create-pr:
-    runs-on: ubuntu-24.04
     needs: validate-codeowner
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: write
@@ -62,13 +62,12 @@ jobs:
           PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://[^ ]+')
           PR_NUMBER="${PR_URL##*/}"
 
-          # Write outputs to environment file
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
           echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
     outputs:
-      pr_number: ${{ steps.create_pr.outputs.pr_number }}
-      pr_url: ${{ steps.create_pr.outputs.pr_url }}
+      pr_number: ${{ env.PR_NUMBER }}
+      pr_url: ${{ env.PR_URL }}
 
   approve-pr:
     needs: create-pr
