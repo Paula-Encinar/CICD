@@ -59,11 +59,12 @@ jobs:
             --label automerge)
           echo "PR created: $PR_OUTPUT"
 
-          # Extraer el número del PR
           PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://[^ ]+')
           PR_NUMBER="${PR_URL##*/}"
-          echo "::set-output name=pr_number::$PR_NUMBER"
-          echo "::set-output name=pr_url::$PR_URL"
+
+          # Write outputs to environment file
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
     outputs:
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
