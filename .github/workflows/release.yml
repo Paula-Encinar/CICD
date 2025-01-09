@@ -1,4 +1,4 @@
-name: Create PR and Approve
+name: Create PR, Approve, and Auto-Merge
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         default: "dev"
 
 jobs:
-  create-pr-and-approve:
+  create-pr-approve-automerge:
     runs-on: ubuntu-latest
 
     permissions:
@@ -17,13 +17,16 @@ jobs:
       pull-requests: write
 
     steps:
+      # Paso 1: Checkout del repositorio
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # Paso 2: Autenticar GitHub CLI
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
+      # Paso 3: Crear la Pull Request con una etiqueta específica
       - name: Create Pull Request
         id: create_pr
         run: |
@@ -31,7 +34,8 @@ jobs:
             --base main \
             --head ${{ github.event.inputs.target_branch }} \
             --title "Merge ${{ github.event.inputs.target_branch }} into main" \
-            --body "This PR was created automatically by the workflow.")
+            --body "This PR was created automatically by the workflow." \
+            --label automerge)
           echo "PR created: $PR_OUTPUT"
 
           # Extraer el número del PR
@@ -39,14 +43,18 @@ jobs:
           PR_NUMBER="${PR_URL##*/}"
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
-      - name: Approve Pull Request
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'github-actions[bot]' && contains(github.event.pull_request.labels.*.name, 'automerge')
+    steps:
+      # Loguear metadata de la PR
+      - name: Log Metadata
         run: |
-          echo "Approving the PR as ${{ github.actor }}..."
-          gh pr review ${{ env.PR_NUMBER }} --approve
+          echo "PR created by: ${{ github.event.pull_request.user.login }}"
+          echo "Labels: ${{ toJSON(github.event.pull_request.labels) }}"
 
-      # Paso 6: Fusionar el Pull Request
-      - name: Merge Pull Request
-        run: |
-          PR_NUMBER=${{ env.PR_NUMBER }}
-          echo "Fusionando el PR #$PR_NUMBER..."
-          gh pr merge $PR_NUMBER --merge --admin
+      # Habilitar Auto-Merge para PRs con la etiqueta 'automerge'
+      - name: Enable auto-merge for PRs with 'automerge' label
+        run: gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
