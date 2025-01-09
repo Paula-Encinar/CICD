@@ -10,7 +10,7 @@ on:
 
 jobs:
   validate-codeowner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Validate Code Owner
@@ -31,7 +31,7 @@ jobs:
           echo "${{ github.actor }} is a valid Code Owner. Proceeding with the workflow..."
 
   create-pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: validate-codeowner
 
     permissions:
@@ -71,7 +71,7 @@ jobs:
 
   approve-pr:
     needs: create-pr
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Select Code Owner Token
@@ -95,7 +95,7 @@ jobs:
 
   auto-merge:
     needs: [create-pr, approve-pr]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: write
