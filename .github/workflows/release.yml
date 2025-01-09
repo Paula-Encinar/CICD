@@ -17,15 +17,15 @@ jobs:
       - name: Validate Code Owner
         run: |
           echo "Validating if ${{ github.actor }} is a Code Owner..."
-          # Convertir el actor y la lista de Code Owners a minúsculas para comparación
-          GITHUB_ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
-          CODEOWNERS=("paula-encinar") # Define aquí los Code Owners en minúsculas
           
-          # Convertir la lista de Code Owners a una cadena con separación de espacios
-          CODEOWNERS_LOWER=$(echo "${CODEOWNERS[@]}" | tr '[:upper:]' '[:lower:]')
+          # Lista de Code Owners
+          CODEOWNERS=("paula-encinar")
+
+          # Convertir el actor actual a minúsculas para comparación
+          GITHUB_ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
 
           # Verificar si el actor está en la lista de Code Owners
-          if [[ ! " ${CODEOWNERS_LOWER} " =~ " ${GITHUB_ACTOR_LOWER} " ]]; then
+          if [[ ! " ${CODEOWNERS[@]} " =~ " ${GITHUB_ACTOR_LOWER} " ]]; then
             echo "Error: User ${{ github.actor }} is not a Code Owner. Workflow execution is not allowed."
             exit 1
           fi
@@ -35,19 +35,22 @@ jobs:
     needs: validate-codeowner
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      # Paso 2: Checkout del repositorio
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      # Paso 3: Autenticar GitHub CLI con el GITHUB_TOKEN
-      - name: Authenticate GitHub CLI
+      # Paso 2: Seleccionar el Token del Code Owner basado en github.actor
+      - name: Select Code Owner Token
+        id: select-token
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          echo "Selecting token for ${{ github.actor }}..."
+          TOKEN_ENV_NAME=$(echo "${{ github.actor }}" | tr '[:lower:]' '[:upper:]' | tr '-' '_' )_TOKEN
+          echo "TOKEN_ENV_NAME=${TOKEN_ENV_NAME}" >> $GITHUB_ENV
+          echo "Selected token environment variable: $TOKEN_ENV_NAME"
+
+      # Paso 3: Autenticar GitHub CLI con el Token seleccionado
+      - name: Authenticate GitHub CLI with Selected Token
+        run: |
+          echo "Authenticating GitHub CLI with the token for ${{ github.actor }}..."
+          gh auth logout || true
+          echo "${{ secrets[env.TOKEN_ENV_NAME] }}" | gh auth login --with-token
 
       # Paso 4: Crear la Pull Request
       - name: Create Pull Request
@@ -57,7 +60,7 @@ jobs:
             --base main \
             --head ${{ github.event.inputs.target_branch }} \
             --title "Merge ${{ github.event.inputs.target_branch }} into main" \
-            --body "This PR was created automatically by the workflow." \
+            --body "This PR was created and approved by ${{ github.actor }} using their own PAT." \
             --label automerge)
           echo "PR created: $PR_OUTPUT"
 
@@ -75,26 +78,16 @@ jobs:
     needs: create-pr
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      # Paso 5: Aprueba la PR con tu usuario (PAULA_DEPLOYMENT)
-      - name: Approve Pull Request with Personal Account
+      # Paso 5: Aprueba la PR con el mismo Token seleccionado
+      - name: Approve Pull Request with Selected Token
         run: |
-          echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with PAULA_DEPLOYMENT..."
-          gh auth logout || true
-          echo "${{ secrets.PAULA_DEPLOYMENT }}" | gh auth login --with-token
+          echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with the token for ${{ github.actor }}..."
           gh pr review --approve "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
 
   auto-merge:
     needs: [create-pr, approve-pr]
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      pull-requests: write
 
     steps:
       # Habilitar Auto-Merge para la PR con etiqueta 'automerge'
