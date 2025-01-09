@@ -41,19 +41,32 @@ jobs:
           # Extraer el número del PR
           PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://[^ ]+')
           PR_NUMBER="${PR_URL##*/}"
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
+          echo "::set-output name=pr_number::$PR_NUMBER"
+          echo "::set-output name=pr_url::$PR_URL"
 
+    outputs:
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
+      pr_url: ${{ steps.create_pr.outputs.pr_url }}
+
+  approve-pr:
+    needs: create-pr
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
       # Paso 4: Aprueba la PR con tu usuario (PAULA_DEPLOYMENT)
       - name: Approve Pull Request with Personal Account
         run: |
-          echo "Approving the PR #${{ env.PR_NUMBER }} with PAULA_DEPLOYMENT..."
+          echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with PAULA_DEPLOYMENT..."
           gh auth logout
           echo "${{ secrets.PAULA_DEPLOYMENT }}" | gh auth login --with-token
-          gh pr review --approve ${{ env.PR_URL }}
+          gh pr review --approve "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
 
   auto-merge:
-    needs: create-pr
+    needs: [create-pr, approve-pr]
     runs-on: ubuntu-latest
 
     permissions:
@@ -63,6 +76,6 @@ jobs:
     steps:
       # Habilitar Auto-Merge para la PR con etiqueta 'automerge'
       - name: Enable Auto-Merge
-        run: gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
+        run: gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
