@@ -7,9 +7,6 @@ on:
         description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
-    branch: 
-      required: true
-      default: "dev"
 
 jobs:
   validate-codeowner:
@@ -42,18 +39,15 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 1: Checkout del repositorio
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Asegúrate de clonar todo el historial necesario
+          fetch-depth: 0 
 
-      # Paso 2: Autenticar GitHub CLI con GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      # Paso 3: Crear la Pull Request
       - name: Create Pull Request
         id: create_pr
         run: |
@@ -80,7 +74,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 4: Seleccionar el Token del Code Owner basado en github.actor
       - name: Select Code Owner Token
         id: select-token
         run: |
@@ -89,14 +82,12 @@ jobs:
           echo "TOKEN_ENV_NAME=${TOKEN_ENV_NAME}" >> $GITHUB_ENV
           echo "Selected token environment variable: $TOKEN_ENV_NAME"
 
-      # Paso 5: Autenticar GitHub CLI con el Token seleccionado
       - name: Authenticate GitHub CLI with Selected Token
         run: |
           echo "Authenticating GitHub CLI with the token for ${{ github.actor }}..."
           gh auth logout || true
           echo "${{ secrets[env.TOKEN_ENV_NAME] }}" | gh auth login --with-token
 
-      # Paso 6: Aprobar la PR con el Token del Code Owner
       - name: Approve Pull Request with Selected Token
         run: |
           echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with the token for ${{ github.actor }}..."
@@ -111,7 +102,6 @@ jobs:
       pull-requests: write
 
     steps:
-      # Habilitar Auto-Merge para la PR con etiqueta 'automerge'
       - name: Enable Auto-Merge
         run: |
           echo "Merging PR #${{ needs.create-pr.outputs.pr_number }}..."
