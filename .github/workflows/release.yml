@@ -1,4 +1,4 @@
-name: Create PR, Auto-Approve, and Auto-Merge
+name: Create PR, Approve with User PAT, and Auto-Merge
 
 on:
   workflow_dispatch:
@@ -21,12 +21,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Paso 2: Autenticar GitHub CLI
+      # Paso 2: Autenticar GitHub CLI con el GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      # Paso 3: Crear la Pull Request con una etiqueta específica
+      # Paso 3: Crear la Pull Request
       - name: Create Pull Request
         id: create_pr
         run: |
@@ -44,12 +44,13 @@ jobs:
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
           echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
-      # Paso 4: Aprobar la PR automáticamente con Auto-Approve
-      - name: Auto-Approve Pull Request
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ env.PR_NUMBER }}
+      # Paso 4: Aprueba la PR con tu usuario (PAULA_DEPLOYMENT)
+      - name: Approve Pull Request with Personal Account
+        run: |
+          echo "Approving the PR #${{ env.PR_NUMBER }} with PAULA_DEPLOYMENT..."
+          gh auth logout
+          echo "${{ secrets.PAULA_DEPLOYMENT }}" | gh auth login --with-token
+          gh pr review --approve ${{ env.PR_URL }}
 
   auto-merge:
     needs: create-pr
@@ -60,8 +61,8 @@ jobs:
       pull-requests: write
 
     steps:
-      # Habilitar Auto-Merge para PRs con la etiqueta 'automerge'
-      - name: Enable auto-merge for PRs with 'automerge' label
+      # Habilitar Auto-Merge para la PR con etiqueta 'automerge'
+      - name: Enable Auto-Merge
         run: gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
