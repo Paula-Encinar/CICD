@@ -9,7 +9,23 @@ on:
         default: "dev"
 
 jobs:
+  validate-codeowner:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Validar que el usuario que ejecuta el workflow sea un Code Owner
+      - name: Validate Code Owner
+        run: |
+          echo "Validating if ${{ github.actor }} is a Code Owner..."
+          CODEOWNERS=("paula-encinar") # Define aquí los Code Owners
+          if [[ ! " ${CODEOWNERS[@]} " =~ " ${GITHUB_ACTOR} " ]]; then
+            echo "Error: User ${{ github.actor }} is not a Code Owner. Workflow execution is not allowed."
+            exit 1
+          fi
+          echo "$GITHUB_ACTOR is a valid Code Owner. Proceeding with the workflow..."
+
   create-pr:
+    needs: validate-codeowner
     runs-on: ubuntu-latest
 
     permissions:
@@ -17,16 +33,16 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 1: Checkout del repositorio
+      # Paso 2: Checkout del repositorio
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Paso 2: Autenticar GitHub CLI con el GITHUB_TOKEN
+      # Paso 3: Autenticar GitHub CLI con el GITHUB_TOKEN
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      # Paso 3: Crear la Pull Request
+      # Paso 4: Crear la Pull Request
       - name: Create Pull Request
         id: create_pr
         run: |
@@ -57,7 +73,7 @@ jobs:
       pull-requests: write
 
     steps:
-      # Paso 4: Aprueba la PR con tu usuario (PAULA_DEPLOYMENT)
+      # Paso 5: Aprueba la PR con tu usuario (PAULA_DEPLOYMENT)
       - name: Approve Pull Request with Personal Account
         run: |
           echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with PAULA_DEPLOYMENT..."
