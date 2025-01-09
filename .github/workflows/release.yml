@@ -61,7 +61,7 @@ jobs:
       - name: Approve Pull Request with Personal Account
         run: |
           echo "Approving the PR #${{ needs.create-pr.outputs.pr_number }} with PAULA_DEPLOYMENT..."
-          gh auth logout
+          gh auth logout || true
           echo "${{ secrets.PAULA_DEPLOYMENT }}" | gh auth login --with-token
           gh pr review --approve "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
 
@@ -76,6 +76,8 @@ jobs:
     steps:
       # Habilitar Auto-Merge para la PR con etiqueta 'automerge'
       - name: Enable Auto-Merge
-        run: gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
+        run: |
+          echo "Merging PR #${{ needs.create-pr.outputs.pr_number }}..."
+          gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ needs.create-pr.outputs.pr_number }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
