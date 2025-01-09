@@ -7,8 +7,7 @@ on:
         description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
-    branches:
-      - dev
+      branches: main
 
 jobs:
   validate-codeowner:
