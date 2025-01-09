@@ -7,7 +7,7 @@ on:
         description: "Branch from which you want to create the PR (e.g., dev)"
         required: true
         default: "dev"
-      branch: 
+      ref_name: 
         required: true
         default: "main"
 
@@ -21,7 +21,7 @@ jobs:
           echo "Validating if ${{ github.actor }} is a Code Owner..."
           
           # Lista de Code Owners
-          CODEOWNERS=("paula-encinar" "antonio-ailabs" "marcos-rodriguez-insud")
+          CODEOWNERS=("paula-encinar")
 
           # Convertir el actor actual a minúsculas para comparación
           GITHUB_ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
