@@ -9,7 +9,7 @@ on:
         default: "dev"
     branch: 
       required: true
-      default: "main"
+      default: "dev"
 
 jobs:
   validate-codeowner:
