@@ -17,12 +17,19 @@ jobs:
       - name: Validate Code Owner
         run: |
           echo "Validating if ${{ github.actor }} is a Code Owner..."
-          CODEOWNERS=("paula-encinar") # Define aquí los Code Owners
-          if [[ ! " ${CODEOWNERS[@]} " =~ " ${GITHUB_ACTOR} " ]]; then
+          # Convertir el actor y la lista de Code Owners a minúsculas para comparación
+          GITHUB_ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
+          CODEOWNERS=("paula-encinar") # Define aquí los Code Owners en minúsculas
+          
+          # Convertir la lista de Code Owners a una cadena con separación de espacios
+          CODEOWNERS_LOWER=$(echo "${CODEOWNERS[@]}" | tr '[:upper:]' '[:lower:]')
+
+          # Verificar si el actor está en la lista de Code Owners
+          if [[ ! " ${CODEOWNERS_LOWER} " =~ " ${GITHUB_ACTOR_LOWER} " ]]; then
             echo "Error: User ${{ github.actor }} is not a Code Owner. Workflow execution is not allowed."
             exit 1
           fi
-          echo "$GITHUB_ACTOR is a valid Code Owner. Proceeding with the workflow..."
+          echo "${{ github.actor }} is a valid Code Owner. Proceeding with the workflow..."
 
   create-pr:
     needs: validate-codeowner
