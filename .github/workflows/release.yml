@@ -1,4 +1,4 @@
-name: Create PR, Approve, and Auto-Merge
+name: Create PR, Auto-Approve, and Auto-Merge
 
 on:
   workflow_dispatch:
@@ -44,13 +44,11 @@ jobs:
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
           echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
-      # Paso 4: Aprobar la PR automáticamente
-      - name: Approve Pull Request
-        run: |
-          echo "Approving the PR #${{ env.PR_NUMBER }}..."
-          gh pr review --approve ${{ env.PR_URL }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Paso 4: Aprobar la PR automáticamente con Auto-Approve
+      - name: Auto-Approve Pull Request
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   auto-merge:
     needs: create-pr
@@ -61,13 +59,6 @@ jobs:
       pull-requests: write
 
     steps:
-      # Loguear metadata de la PR
-      - name: Log Metadata
-        run: |
-          echo "PR created by github-actions[bot]"
-          echo "PR URL: ${{ env.PR_URL }}"
-          echo "PR Number: ${{ env.PR_NUMBER }}"
-
       # Habilitar Auto-Merge para PRs con la etiqueta 'automerge'
       - name: Enable auto-merge for PRs with 'automerge' label
         run: gh pr merge --auto --merge "https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
