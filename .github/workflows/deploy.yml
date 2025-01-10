@@ -1,11 +1,11 @@
-name: validate codeowner
+name: Validate Code Owner Before Workflow Execution
 
 on:
   workflow_dispatch:
 
 jobs:
   validate-codeowner:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
@@ -17,7 +17,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             // Descargar el contenido del archivo CODEOWNERS
-            const codeOwnersResponse = await github.repos.getContent({
+            const codeOwnersResponse = await github.rest.repos.getContent({
               owner: context.repo.owner,
               repo: context.repo.repo,
               path: ".github/CODEOWNERS",
