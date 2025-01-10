@@ -1,0 +1,45 @@
+name: Create PR, Approve with User PAT, and Auto-Merge
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Branch from which you want to create the PR (e.g., dev)"
+        required: true
+        default: "dev"
+
+jobs:
+  validate-codeowner:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Validate if Actor is a Code Owner
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Descargar el contenido del archivo CODEOWNERS
+            const codeOwnersResponse = await github.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: ".github/CODEOWNERS",
+            });
+
+            // Decodificar el contenido del archivo CODEOWNERS
+            const codeOwnersContent = Buffer.from(codeOwnersResponse.data.content, 'base64').toString();
+            console.log("CODEOWNERS Content:\n", codeOwnersContent);
+
+            // Obtener el usuario actual (github.actor)
+            const actor = context.actor.toLowerCase();
+
+            // Validar si el usuario está en el archivo CODEOWNERS
+            const isCodeOwner = codeOwnersContent.toLowerCase().includes(actor);
+
+            if (!isCodeOwner) {
+              throw new Error(`User ${actor} is not a Code Owner. Workflow execution is not allowed.`);
+            }
+
+            console.log(`User ${actor} is a valid Code Owner. Proceeding with the workflow.`);
