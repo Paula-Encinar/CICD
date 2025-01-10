@@ -1,4 +1,4 @@
-name: Create PR, Approve with User PAT, and Auto-Merge
+name: validate codeowner
 
 on:
   workflow_dispatch:
