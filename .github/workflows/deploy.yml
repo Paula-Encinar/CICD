@@ -16,21 +16,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Descargar el contenido del archivo CODEOWNERS
             const codeOwnersResponse = await github.rest.repos.getContent({
               owner: context.repo.owner,
               repo: context.repo.repo,
               path: ".github/CODEOWNERS",
             });
 
-            // Decodificar el contenido del archivo CODEOWNERS
             const codeOwnersContent = Buffer.from(codeOwnersResponse.data.content, 'base64').toString();
             console.log("CODEOWNERS Content:\n", codeOwnersContent);
 
-            // Obtener el usuario actual (github.actor)
             const actor = context.actor.toLowerCase();
 
-            // Validar si el usuario está en el archivo CODEOWNERS
             const isCodeOwner = codeOwnersContent.toLowerCase().includes(actor);
 
             if (!isCodeOwner) {
